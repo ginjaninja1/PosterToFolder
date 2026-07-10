@@ -2,6 +2,7 @@
 using Emby.Web.GenericEdit.Elements;
 using Emby.Web.GenericEdit.Elements.List;
 using MediaBrowser.Model.Attributes;
+using System.Collections.Generic;
 using System.ComponentModel;
 
 namespace PosterToFolder.UI.Config
@@ -20,8 +21,16 @@ namespace PosterToFolder.UI.Config
 
         public CaptionItem LibraryFilterHeading { get; set; } = new CaptionItem("Library / Path Filters");
 
-        [DisplayName("Library Paths")]
-        [Description("Auto-populated from your Emby libraries each time the task runs. Untick a path to exclude items stored under it. If this list is empty, all libraries/paths are processed.")]
-        public EditableObjectCollection LibraryPaths { get; set; } = new EditableObjectCollection();
+        /// <summary>
+        /// Holds the raw configuration data for the path list.
+        /// Browsable(false) prevents the engine from trying to render this list directly as a text field.
+        /// </summary>
+        [Browsable(false)]
+        public List<LibraryPathFilterItem> LibraryPaths { get; set; } = new List<LibraryPathFilterItem>();
+
+        /// <summary>
+        /// The UI component that Emby's GenericEdit engine renders on the config page.
+        /// </summary>
+        public GenericItemList LibraryList { get; set; } = new GenericItemList();
     }
 }
