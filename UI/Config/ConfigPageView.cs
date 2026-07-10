@@ -52,6 +52,22 @@ namespace PosterToFolder.UI
             this.ContentData = config;
         }
 
+        private static bool IsRelevantLibrary(VirtualFolderInfo folder)
+        {
+            return string.IsNullOrEmpty(folder.CollectionType)
+                || string.Equals(folder.CollectionType, "movies", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(folder.CollectionType, "tvshows", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private List<VirtualFolderInfo> GetRelevantLibraries()
+        {
+            return this.libraryManager
+                .GetVirtualFolders()
+                .Where(IsRelevantLibrary)
+                .OrderBy(f => f.Name)
+                .ToList();
+        }
+
 
         private void EnsureLibraryPaths(ConfigUI config)
         {
@@ -85,14 +101,42 @@ namespace PosterToFolder.UI
             }
         }
 
+        private void EnsureFiltersUpToDate(
+    ConfigUI config,
+    List<VirtualFolderInfo> folders)
+        {
+            if (config.LibraryPaths == null)
+            {
+                config.LibraryPaths = new List<LibraryPathFilterItem>();
+            }
+
+            foreach (var folder in folders)
+            {
+                foreach (var location in folder.Locations)
+                {
+                    var existing = config.LibraryPaths.FirstOrDefault(x =>
+                        string.Equals(x.LibraryName, folder.Name, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(x.Path, location, StringComparison.OrdinalIgnoreCase));
+
+                    if (existing == null)
+                    {
+                        config.LibraryPaths.Add(new LibraryPathFilterItem
+                        {
+                            LibraryName = folder.Name,
+                            Path = location,
+                            Enabled = true
+                        });
+                    }
+                }
+            }
+        }
+
 
         private void BuildLibraryList(ConfigUI config)
         {
             config.LibraryList.Clear();
 
-            var folders = this.libraryManager.GetVirtualFolders()
-                .OrderBy(x => x.Name)
-                .ToList();
+            var folders = GetRelevantLibraries();
 
 
             foreach (var folder in folders)
