@@ -1,16 +1,10 @@
-﻿
-using MediaBrowser.Common;
-using MediaBrowser.Common.Plugins;
+﻿using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller;
-using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Plugins.UI;
-using MediaBrowser.Model.Serialization;
 using PosterToFolder.Storage;
 using PosterToFolder.UI;
-using PosterToFolder.UI.Config;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -60,7 +54,11 @@ namespace PosterToFolder
                 {
                     this.pages = new List<IPluginUIPageController>();
 
-                    this.pages.Add(new MainPageController(this.GetPluginInfo(), this.applicationHost, this.basicsStore));
+                    this.pages.Add(new MainPageController(
+    this.GetPluginInfo(),
+    this.applicationHost,
+    this.basicsStore,
+    this.logger));
 
                 }
 

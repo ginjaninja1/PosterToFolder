@@ -1,4 +1,5 @@
 ﻿using MediaBrowser.Controller;
+using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Plugins.UI;
 using MediaBrowser.Model.Plugins.UI.Views;
@@ -16,16 +17,19 @@ namespace PosterToFolder.UI
         private readonly PluginInfo pluginInfo;
         private readonly BasicsOptionsStore basicsOptionsStore;
         private readonly List<IPluginUIPageController> tabPages = new List<IPluginUIPageController>();
+        private readonly ILogger logger;
 
         /// <summary>Initializes a new instance of the <see cref="ControllerBase" /> class.</summary>
         /// <param name="pluginInfo">The plugin information.</param>
         /// <param name="applicationHost"></param>
         /// <param name="basicsOptionsStore"></param>
-        public MainPageController(PluginInfo pluginInfo, IServerApplicationHost applicationHost, BasicsOptionsStore basicsOptionsStore)
+        public MainPageController(PluginInfo pluginInfo, IServerApplicationHost applicationHost, BasicsOptionsStore basicsOptionsStore,
+    ILogger logger)
             : base(pluginInfo.Id)
         {
             this.pluginInfo = pluginInfo;
             this.basicsOptionsStore = basicsOptionsStore;
+            this.logger = logger;
             this.PageInfo = new PluginPageInfo
             {
                 Name = "PosterToFolder",
@@ -40,11 +44,15 @@ namespace PosterToFolder.UI
 
         }
 
+
         public override PluginPageInfo PageInfo { get; }
 
         public override Task<IPluginUIView> CreateDefaultPageView()
         {
-            IPluginUIView view = new ConfigPageView(this.pluginInfo, this.basicsOptionsStore);
+            IPluginUIView view = new ConfigPageView(
+    this.pluginInfo,
+    this.basicsOptionsStore,
+    this.logger);
             return Task.FromResult(view);
         }
 
