@@ -17,11 +17,11 @@ namespace PosterToFolder.UI.Config
             this.ContentData = store.GetOptions();
         }
 
-        public ConfigUI BasicsUI => this.ContentData as ConfigUI;
+        public ConfigUI ConfigUI => this.ContentData as ConfigUI;
 
         public override Task<IPluginUIView> OnSaveCommand(string itemId, string commandId, string data)
         {
-            this.store.SetOptions(this.BasicsUI);
+            this.store.SetOptions(this.ConfigUI);
             return base.OnSaveCommand(itemId, commandId, data);
         }
     }

@@ -45,7 +45,7 @@ namespace PosterToFolder
 
         public override string Description => "Copies poster.ext to folder.ext for movies and TV shows that are missing a folder image.";
         public override Guid Id => new Guid("1E0C5960-DF19-4C22-AF9A-FA0FDC3EF649");
-        public override string Name => "Emby Template";
+        public override string Name => "Poster To Folder";
 
         public ImageFormat ThumbImageFormat => ImageFormat.Png;
 

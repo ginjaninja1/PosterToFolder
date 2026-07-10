@@ -41,7 +41,7 @@ namespace PosterToFolder.Tasks
 
         public string Category => "Library";
 
-        public Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+        public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
             var options = Plugin.Instance.ConfigStore.GetOptions();
 
@@ -61,10 +61,11 @@ namespace PosterToFolder.Tasks
             {
                 IncludeItemTypes = new[] { typeof(Movie).Name, typeof(Series).Name },
                 Recursive = true,
-                DtoOptions = new DtoOptions(false),
+                DtoOptions = new DtoOptions(true),
+                IsVirtualItem = false, // exclude placeholders (e.g. "Coming Soon" items with no real file yet)
             };
 
-            var items = this.libraryManager.GetItemList(query);
+            var items = this.libraryManager.GetItemList(query).ToList();
             var copyService = new PosterCopyService(this.logger, this.fileSystem);
 
             var total = items.Count;

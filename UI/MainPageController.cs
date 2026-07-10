@@ -28,11 +28,11 @@ namespace PosterToFolder.UI
             this.basicsOptionsStore = basicsOptionsStore;
             this.PageInfo = new PluginPageInfo
             {
-                Name = "PluginUiDemo1",
-                EnableInMainMenu = true,
-                DisplayName = "Plugin UI Demo 1",
+                Name = "PosterToFolder",
+                EnableInMainMenu = false,
+                DisplayName = "PosterToFolder",
                 MenuIcon = "list_alt",
-                IsMainConfigPage = false,
+                IsMainConfigPage = true,
             };
 
             //Add adition PluginUIViews
