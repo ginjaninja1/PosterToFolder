@@ -17,6 +17,8 @@ The project state must always be recoverable from this document alone.
 Any discrepancy between code and this document means the document is
 outdated and must be updated.
 
+Project is avilable on github (using bash for Claude) https://github.com/ginjaninja1/PosterToFolder
+
 
 CRITICAL IMPLEMENTATION RULES
 =====================================================
