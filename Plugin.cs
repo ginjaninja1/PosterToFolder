@@ -33,9 +33,17 @@ namespace PosterToFolder
             this.applicationHost = applicationHost;
             this.logger = logManager.GetLogger(this.Name);
             this.basicsStore = new BasicsOptionsStore(applicationHost, this.logger, this.Name);
+
+            Instance = this;
         }
 
-        public override string Description => "A Template Emby PLugin";
+        /// <summary>Gets the running instance of this plugin. Used by the scheduled task to reach configuration.</summary>
+        public static Plugin Instance { get; private set; }
+
+        /// <summary>Gets the config store, exposed so <see cref="PosterToFolder.Tasks.PosterToFolderTask"/> can load/save options.</summary>
+        public BasicsOptionsStore ConfigStore => this.basicsStore;
+
+        public override string Description => "Copies poster.ext to folder.ext for movies and TV shows that are missing a folder image.";
         public override Guid Id => new Guid("1E0C5960-DF19-4C22-AF9A-FA0FDC3EF649");
         public override string Name => "Emby Template";
 
