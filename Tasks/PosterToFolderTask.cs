@@ -161,6 +161,7 @@ namespace PosterToFolder.Tasks
             }
         }
 
+        /*
         public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
         {
             return new[]
@@ -172,6 +173,11 @@ namespace PosterToFolder.Tasks
                     TimeOfDayTicks = TimeSpan.FromHours(23).Ticks, // Sunday night
                 },
             };
+        }
+        */
+        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
+        {
+            return Array.Empty<TaskTriggerInfo>();
         }
     }
 }
