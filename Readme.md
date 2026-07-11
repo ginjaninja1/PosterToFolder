@@ -9,12 +9,14 @@ For all Movies and Tv Shows inscope of library filter,
 If Emby primary image exists and destination folder.ext does not exist, copy primary image to folder.ext
 
 ## 🛠️ Installation
-Copy dll to plugins folder
-Configure a scheduled task
+Copy dll to plugins folder.
+
+Configure a scheduled task.
 
 
 ## 📖 Usage
-Test on one test path first
+Test on one test path first.
+
 Configure the scheduled task as desired.
 
 ## 🤝 Contributing
