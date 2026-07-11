@@ -24,6 +24,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 	  <None Remove="Handover.md" />
+	  <None Remove="Readme.md" />
 	</ItemGroup>
 	
   <ItemGroup>

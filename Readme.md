@@ -1,6 +1,4 @@
-# Biggest Heading (H1 Size)
-
-# 🚀 Poster to Folder
+## 🚀 Poster to Folder
 
 Copies Poster.ext to Folder.ext to beautify Windows
 When emby moved to poster.jpg and inbuilt metadata, windows folders stopped showing images for TV Shows and Movies.

@@ -4,8 +4,8 @@
 *.suo
 
 # Build outputs
-[Bb]in/
-[Oo]bj/
+**/[Bb]in/
+**/[Oo]bj/
 
 # Visual Studio cache folders
-.vs/
+**/.vs/
