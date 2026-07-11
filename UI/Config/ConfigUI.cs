@@ -12,7 +12,7 @@ namespace PosterToFolder.UI.Config
         public override string EditorTitle => "Poster To Folder - Configuration";
 
         public override string EditorDescription =>
-            "Copies each movie/show's poster image to folder.ext when a folder image is missing.";
+            "Copies each movie/show's poster image to folder.ext on disk when a folder image is missing.";
 
         public CaptionItem GeneralHeading { get; set; } = new CaptionItem("General");
 
