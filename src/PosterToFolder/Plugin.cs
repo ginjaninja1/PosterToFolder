@@ -9,7 +9,7 @@ using MediaBrowser.Model.Serialization;
 using PosterToFolder.Configuration;
 using PosterToFolder.UI;
 using System;
-using System.Collections.Generic; //test
+using System.Collections.Generic;
 using System.IO; 
 
 namespace PosterToFolder
