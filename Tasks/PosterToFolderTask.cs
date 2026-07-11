@@ -43,7 +43,7 @@ namespace PosterToFolder.Tasks
 
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            var options = Plugin.Instance.ConfigStore.GetOptions();
+            var options = Plugin.Instance.Configuration;
 
             if (!options.EnablePlugin)
             {
@@ -53,7 +53,7 @@ namespace PosterToFolder.Tasks
 
             this.SyncLibraryPathFilters(options);
 
-            var filterRows = options.LibraryPaths.OfType<LibraryPathFilterItem>().ToList();
+            var filterRows = options.LibraryPaths.ToList();
             var enabledPaths = filterRows.Where(p => p.Enabled && !string.IsNullOrEmpty(p.Path)).Select(p => p.Path).ToList();
             var disabledPaths = filterRows.Where(p => !p.Enabled && !string.IsNullOrEmpty(p.Path)).Select(p => p.Path).ToList();
 
@@ -133,44 +133,26 @@ namespace PosterToFolder.Tasks
 
         /// <summary>
         /// Refreshes the config's LibraryPaths list from the server's actual current
-        /// libraries/paths, adding any new ones as Enabled = true. Existing rows (and their
-        /// toggle state) are left untouched. Persists changes back to disk when anything is added.
+        /// (relevant - movies/TV shows only, see RelevantLibraryTypes) libraries/paths,
+        /// adding any new ones as Enabled = true. Existing rows (and their toggle state)
+        /// are left untouched. Persists changes back to disk when anything is added.
+        ///
+        /// Delegates to the same LibraryPathReconciler the config page uses, so this
+        /// task and the UI can never drift out of sync on what counts as a valid path.
         /// </summary>
-        private void SyncLibraryPathFilters(ConfigUI options)
+        private void SyncLibraryPathFilters(PosterToFolder.Configuration.PluginConfiguration options)
         {
             try
             {
-                var virtualFolders = this.libraryManager.GetVirtualFolders();
-                var existing = options.LibraryPaths.OfType<LibraryPathFilterItem>().ToList();
-                var changed = false;
+                var relevantFolders = RelevantLibraryTypes.Filter(this.libraryManager.GetVirtualFolders());
 
-                foreach (var folder in virtualFolders)
+                var before = options.LibraryPaths.Count;
+
+                LibraryPathReconciler.EnsureDiscoveredPaths(options, relevantFolders);
+
+                if (options.LibraryPaths.Count != before)
                 {
-                    var locations = folder.Locations ?? Array.Empty<string>();
-
-                    foreach (var location in locations)
-                    {
-                        var alreadyPresent = existing.Any(e =>
-                            string.Equals(e.LibraryName, folder.Name, StringComparison.OrdinalIgnoreCase) &&
-                            string.Equals(e.Path, location, StringComparison.OrdinalIgnoreCase));
-
-                        if (!alreadyPresent)
-                        {
-                            options.LibraryPaths.Add(new LibraryPathFilterItem
-                            {
-                                LibraryName = folder.Name,
-                                Path = location,
-                                Enabled = true,
-                            });
-
-                            changed = true;
-                        }
-                    }
-                }
-
-                if (changed)
-                {
-                    Plugin.Instance.ConfigStore.SetOptions(options);
+                    Plugin.Instance.SaveConfiguration();
                 }
             }
             catch (Exception ex)

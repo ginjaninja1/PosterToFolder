@@ -4,6 +4,7 @@ using System.Linq;
 using Emby.Web.GenericEdit.Elements;
 using Emby.Web.GenericEdit.Elements.List;
 using MediaBrowser.Model.Entities;
+using PosterToFolder.Configuration;
 
 namespace PosterToFolder.UI.Config
 {
@@ -11,15 +12,18 @@ namespace PosterToFolder.UI.Config
     /// Builds the read-only, on-screen GenericItemList representation of the
     /// library/path filters. This is purely a view concern.
     ///
-    /// IMPORTANT: BuildDisplayConfig always returns a NEW ConfigUI instance,
-    /// never the persisted one passed in. That way the visual LibraryList
-    /// built here can never end up written to disk by SetOptions - the
-    /// persisted instance is never touched by this class.
+    /// BuildDisplayConfig always returns a NEW ConfigUI instance built from
+    /// the persisted PluginConfiguration - it never hands back or mutates
+    /// the persisted instance itself. ConfigUI is only ever used as
+    /// ContentData; it is never passed to store.SetOptions.
+    ///
+    /// NOTE: currentFolders should already be filtered to relevant library
+    /// types - see <see cref="RelevantLibraryTypes"/>.
     /// </summary>
     internal static class ConfigViewBuilder
     {
         public static ConfigUI BuildDisplayConfig(
-            ConfigUI persistedConfig,
+            PluginConfiguration persistedConfig,
             IReadOnlyList<VirtualFolderInfo> currentFolders)
         {
             var display = new ConfigUI
@@ -50,12 +54,14 @@ namespace PosterToFolder.UI.Config
                 .Where(x => string.Equals(x.LibraryName, folder.Name, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
+            var locations = folder.Locations ?? Array.Empty<string>();
+
             var subItems = new GenericItemList();
             int enabledValidPaths = 0;
             int validPathCount = 0;
 
             // Currently valid, interactive paths.
-            foreach (var location in folder.Locations)
+            foreach (var location in locations)
             {
                 validPathCount++;
 
@@ -91,7 +97,7 @@ namespace PosterToFolder.UI.Config
             // Shown greyed out and non-interactive (no CommandId) rather than
             // pruned, so a saved preference survives if the path comes back.
             var stalePaths = storedPathsForLibrary
-                .Where(x => !folder.Locations.Any(loc =>
+                .Where(x => !locations.Any(loc =>
                     string.Equals(loc, x.Path, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 

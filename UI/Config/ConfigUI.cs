@@ -1,6 +1,7 @@
 ﻿using Emby.Web.GenericEdit;
 using Emby.Web.GenericEdit.Elements;
 using Emby.Web.GenericEdit.Elements.List;
+using MediaBrowser.Model.Attributes;
 using System.Collections.Generic;
 using System.ComponentModel;
 
@@ -17,6 +18,7 @@ namespace PosterToFolder.UI.Config
 
         [DisplayName("Enable Plugin")]
         [Description("When disabled, the scheduled task exits immediately without processing any items.")]
+        [AutoPostBack("updateconfig", nameof(EnablePlugin))]
         public bool EnablePlugin { get; set; } = true;
 
         public CaptionItem LibraryFilterHeading { get; set; } =

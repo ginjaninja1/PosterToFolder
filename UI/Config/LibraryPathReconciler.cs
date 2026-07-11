@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using MediaBrowser.Model.Entities;
+using PosterToFolder.Configuration;
 
 namespace PosterToFolder.UI.Config
 {
@@ -13,6 +14,9 @@ namespace PosterToFolder.UI.Config
     /// Rule: paths/libraries that disappear from Emby are NEVER pruned from
     /// this list (they may come back later). Only currently-valid paths can
     /// be toggled from the UI - see IsPathCurrentlyValid.
+    ///
+    /// NOTE: callers should pass in a list already filtered down to relevant
+    /// library types - see <see cref="RelevantLibraryTypes"/>.
     /// </summary>
     internal static class LibraryPathReconciler
     {
@@ -21,7 +25,7 @@ namespace PosterToFolder.UI.Config
         /// Never removes existing entries.
         /// </summary>
         public static void EnsureDiscoveredPaths(
-            ConfigUI config,
+            PluginConfiguration config,
             IReadOnlyList<VirtualFolderInfo> currentFolders)
         {
             if (config.LibraryPaths == null)
@@ -31,7 +35,9 @@ namespace PosterToFolder.UI.Config
 
             foreach (var folder in currentFolders)
             {
-                foreach (var location in folder.Locations)
+                var locations = folder.Locations ?? Array.Empty<string>();
+
+                foreach (var location in locations)
                 {
                     var exists = config.LibraryPaths.Any(x =>
                         string.Equals(x.Path, location, StringComparison.OrdinalIgnoreCase));
@@ -50,8 +56,9 @@ namespace PosterToFolder.UI.Config
         }
 
         /// <summary>
-        /// True when the named library still exists and the path is still
-        /// one of its current locations. False for stale/removed entries -
+        /// True when the named library still exists (amongst the relevant,
+        /// current folders passed in) and the path is still one of its
+        /// current locations. False for stale/removed/irrelevant entries -
         /// these are not accessible from the UI even if still on disk.
         /// </summary>
         public static bool IsPathCurrentlyValid(
@@ -67,7 +74,9 @@ namespace PosterToFolder.UI.Config
                 return false;
             }
 
-            return folder.Locations.Any(loc =>
+            var locations = folder.Locations ?? Array.Empty<string>();
+
+            return locations.Any(loc =>
                 string.Equals(loc, path, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -78,7 +87,7 @@ namespace PosterToFolder.UI.Config
         /// Returns true if anything changed (caller should persist).
         /// </summary>
         public static bool ToggleLibrary(
-            ConfigUI config,
+            PluginConfiguration config,
             IReadOnlyList<VirtualFolderInfo> currentFolders,
             string libraryName)
         {
@@ -108,7 +117,7 @@ namespace PosterToFolder.UI.Config
         /// only currently valid paths can be toggled from the UI.
         /// </summary>
         public static bool TogglePath(
-            ConfigUI config,
+            PluginConfiguration config,
             IReadOnlyList<VirtualFolderInfo> currentFolders,
             string libraryName,
             string path)
