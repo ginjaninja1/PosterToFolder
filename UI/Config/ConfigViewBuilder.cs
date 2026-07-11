@@ -5,6 +5,7 @@ using Emby.Web.GenericEdit.Elements;
 using Emby.Web.GenericEdit.Elements.List;
 using MediaBrowser.Model.Entities;
 using PosterToFolder.Configuration;
+using MediaBrowser.Model.Tasks;
 
 namespace PosterToFolder.UI.Config
 {
@@ -24,12 +25,39 @@ namespace PosterToFolder.UI.Config
     {
         public static ConfigUI BuildDisplayConfig(
             PluginConfiguration persistedConfig,
-            IReadOnlyList<VirtualFolderInfo> currentFolders)
+            IReadOnlyList<VirtualFolderInfo> currentFolders,
+            ITaskManager taskManager)
         {
+            // 1. Interrogate the task manager registry using your explicit task string Key
+            var myTaskWorker = taskManager.ScheduledTasks
+                .FirstOrDefault(t => string.Equals(t.ScheduledTask.Key, "PosterToFolderTask", StringComparison.Ordinal));
+
+            // 2. Build the router fragment location using the dynamically discovered worker ID
+            string hyperlinkUrl = myTaskWorker != null
+                ? $"/scheduledtask?id={myTaskWorker.Id}"
+                : "/scheduledtasks";
+
+
             var display = new ConfigUI
             {
                 EnablePlugin = persistedConfig.EnablePlugin,
-                LibraryPaths = persistedConfig.LibraryPaths
+                LibraryPaths = persistedConfig.LibraryPaths,
+
+                // 3. Construct the list item element object hierarchy inside instantiation block
+                ScheduledTaskLink = new GenericItemList
+                {
+                    new GenericListItem
+                    {
+                        PrimaryText = "Configure Scheduled Task",
+                        SecondaryText = "Manage background execution rules and automation intervals",
+                        Icon = IconNames.link,
+                        Status = ItemStatus.Succeeded,
+                        HyperLink = hyperlinkUrl,
+                        HyperLinkTargetExternal = false // Directs Emby to leverage internal app routing
+                    }
+                }
+
+
             };
 
             display.LibraryList.Clear();

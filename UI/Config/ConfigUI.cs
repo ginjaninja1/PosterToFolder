@@ -38,5 +38,34 @@ namespace PosterToFolder.UI.Config
         /// </summary>
         public GenericItemList LibraryList { get; set; } =
             new GenericItemList();
+
+        /*
+        public GenericItemList ScheduledTaskLink { get; set; } = new GenericItemList
+        {
+            new GenericListItem
+            {
+                PrimaryText = "Configure Scheduled Task",
+                SecondaryText = "",
+                Icon = IconNames.link,
+                Status = ItemStatus.Succeeded,
+                HyperLink = "/scheduledtasks",
+                HyperLinkTargetExternal = true
+            }
+        };
+        */
+        public GenericItemList ScheduledTaskLink { get; set; } = new GenericItemList();
+
+        public GenericItemList ForumLink { get; set; } = new GenericItemList
+        {
+            new GenericListItem
+            {
+                PrimaryText = "Community Forum",
+                SecondaryText = "Issues, Suggestions and Updates",
+                Icon = IconNames.link,
+                Status = ItemStatus.Succeeded,
+                HyperLink = "https://emby.media/community/topic/148340-plugin-manage-coming-soon/",
+                HyperLinkTargetExternal = true
+            }
+        };
     }
 }

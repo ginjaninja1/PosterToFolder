@@ -11,6 +11,7 @@ using MediaBrowser.Model.Serialization;
 using PosterToFolder.Configuration;
 using PosterToFolder.UIBaseClasses.Views;
 using PosterToFolder.UI.Config;
+using MediaBrowser.Model.Tasks;
 
 namespace PosterToFolder.UI
 {
@@ -32,6 +33,7 @@ namespace PosterToFolder.UI
         private readonly ILibraryManager libraryManager;
         private readonly IJsonSerializer jsonSerializer;
         private readonly ILogger logger;
+        private readonly ITaskManager taskManager;
 
         public ConfigPageView(
             PluginInfo pluginInfo,
@@ -42,7 +44,10 @@ namespace PosterToFolder.UI
             this.logger = logger;
             this.libraryManager = applicationHost.Resolve<ILibraryManager>();
             this.jsonSerializer = applicationHost.Resolve<IJsonSerializer>();
-
+            this.taskManager = applicationHost.Resolve<ITaskManager>();
+            this.ShowSave = false;
+            this.ShowBack = true;
+            this.AllowBack = true;
             RebuildContentData();
         }
 
@@ -70,7 +75,7 @@ namespace PosterToFolder.UI
 
             LibraryPathReconciler.EnsureDiscoveredPaths(config, currentFolders);
 
-            this.ContentData = ConfigViewBuilder.BuildDisplayConfig(config, currentFolders);
+            this.ContentData = ConfigViewBuilder.BuildDisplayConfig(config, currentFolders, this.taskManager);
         }
 
         public override Task<IPluginUIView> OnSaveCommand(
