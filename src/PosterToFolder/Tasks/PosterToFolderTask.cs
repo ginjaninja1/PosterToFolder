@@ -6,6 +6,7 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Tasks;
+using PosterToFolder.Configuration;
 using PosterToFolder.Services;
 using PosterToFolder.UI.Config;
 using System;
@@ -39,7 +40,7 @@ namespace PosterToFolder.Tasks
 
         public string Description => "Finds movies and TV shows with a poster image but no folder image, and copies the poster to folder.ext.";
 
-        public string Category => "Library";
+        public string Category => "GinjaNinja Tools";
 
         public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
@@ -51,11 +52,23 @@ namespace PosterToFolder.Tasks
                 return Task.CompletedTask;
             }
 
-            this.SyncLibraryPathFilters(options);
+            // Read directly from the Emby-managed configuration object using the correct type
+            var filterRows = options.LibraryPaths ?? new List<LibraryPathFilterItem>();
 
-            var filterRows = options.LibraryPaths.ToList();
             var enabledPaths = filterRows.Where(p => p.Enabled && !string.IsNullOrEmpty(p.Path)).Select(p => p.Path).ToList();
             var disabledPaths = filterRows.Where(p => !p.Enabled && !string.IsNullOrEmpty(p.Path)).Select(p => p.Path).ToList();
+
+            // Clear, explicit logging based on user configuration state
+            if (enabledPaths.Count == 0)
+            {
+                this.logger.Info("No Libraries/Paths opted in. Exiting without processing.");
+                return Task.CompletedTask;
+            }
+
+            foreach (var path in enabledPaths)
+            {
+                this.logger.Info("Library/Paths Opted In: {0}", path);
+            }
 
             var query = new InternalItemsQuery
             {
@@ -71,40 +84,51 @@ namespace PosterToFolder.Tasks
             var total = items.Count;
             var processed = 0;
 
-            foreach (var item in items)
+            var copiedCount = 0;
+            var skippedCount = 0;
+            var erroredCount = 0;
+
+            foreach (var item in items.Where(item => this.IsInScope(item, enabledPaths, disabledPaths)))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (this.IsInScope(item, enabledPaths, disabledPaths))
+                var typeLabel = item is Series ? "Series" : "Movie";
+
+                var result = copyService.EvaluateAndCopy(item, typeLabel);
+                switch (result)
                 {
-                    var typeLabel = item is Series ? "Series" : "Movie";
-                    copyService.EvaluateAndCopy(item, typeLabel);
+                    case EvaluationResult.Copied:
+                        copiedCount++;
+                        break;
+                    case EvaluationResult.Skipped:
+                        skippedCount++;
+                        break;
+                    case EvaluationResult.Errored:
+                        erroredCount++;
+                        break;
                 }
 
                 processed++;
                 progress.Report(total == 0 ? 100.0 : (processed / (double)total) * 100.0);
             }
 
+            // Consolidated summary metric output
+            this.logger.Info("{0} Copied, {1} Skipped, {2} Errored", copiedCount, skippedCount, erroredCount);
+
             return Task.CompletedTask;
         }
 
         /// <summary>
         /// Determines whether an item's folder falls under an enabled path.
-        /// Rules: disabled paths always exclude; if any enabled paths are configured, the item
-        /// must fall under one of them; if no filters are configured at all, everything is in scope.
+        /// Rules: disabled paths always exclude; the item must fall under an explicitly enabled path.
         /// </summary>
         private bool IsInScope(BaseItem item, List<string> enabledPaths, List<string> disabledPaths)
         {
-            if (enabledPaths.Count == 0 && disabledPaths.Count == 0)
-            {
-                return true;
-            }
-
             var itemPath = item.ContainingFolderPath ?? item.Path;
 
             if (string.IsNullOrEmpty(itemPath))
             {
-                return true;
+                return false;
             }
 
             if (disabledPaths.Any(p => IsUnderPath(itemPath, p)))
@@ -112,12 +136,7 @@ namespace PosterToFolder.Tasks
                 return false;
             }
 
-            if (enabledPaths.Count > 0)
-            {
-                return enabledPaths.Any(p => IsUnderPath(itemPath, p));
-            }
-
-            return true;
+            return enabledPaths.Any(p => IsUnderPath(itemPath, p));
         }
 
         private static bool IsUnderPath(string itemPath, string root)
@@ -129,36 +148,6 @@ namespace PosterToFolder.Tasks
 
             var normalizedRoot = root.TrimEnd('\\', '/');
             return itemPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
-        }
-
-        /// <summary>
-        /// Refreshes the config's LibraryPaths list from the server's actual current
-        /// (relevant - movies/TV shows only, see RelevantLibraryTypes) libraries/paths,
-        /// adding any new ones as Enabled = true. Existing rows (and their toggle state)
-        /// are left untouched. Persists changes back to disk when anything is added.
-        ///
-        /// Delegates to the same LibraryPathReconciler the config page uses, so this
-        /// task and the UI can never drift out of sync on what counts as a valid path.
-        /// </summary>
-        private void SyncLibraryPathFilters(PosterToFolder.Configuration.PluginConfiguration options)
-        {
-            try
-            {
-                var relevantFolders = RelevantLibraryTypes.Filter(this.libraryManager.GetVirtualFolders());
-
-                var before = options.LibraryPaths.Count;
-
-                LibraryPathReconciler.EnsureDiscoveredPaths(options, relevantFolders);
-
-                if (options.LibraryPaths.Count != before)
-                {
-                    Plugin.Instance.SaveConfiguration();
-                }
-            }
-            catch (Exception ex)
-            {
-                this.logger.Warn("Failed to sync library/path filter list: {0}", ex.Message);
-            }
         }
 
         /*

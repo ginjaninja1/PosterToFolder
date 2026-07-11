@@ -48,7 +48,7 @@ namespace PosterToFolder.UI.Config
                         {
                             LibraryName = folder.Name,
                             Path = location,
-                            Enabled = true
+                            Enabled = false
                         });
                     }
                 }

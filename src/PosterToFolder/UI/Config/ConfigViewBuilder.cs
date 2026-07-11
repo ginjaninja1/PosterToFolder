@@ -96,7 +96,7 @@ namespace PosterToFolder.UI.Config
                 var stored = storedPathsForLibrary.FirstOrDefault(x =>
                     string.Equals(x.Path, location, StringComparison.OrdinalIgnoreCase));
 
-                bool enabled = stored?.Enabled ?? true;
+                bool enabled = stored?.Enabled ?? false;
 
                 if (enabled)
                 {

@@ -5,7 +5,7 @@
     <AssemblyName>PosterToFolder</AssemblyName>
     <RootNamespace>PosterToFolder</RootNamespace>
     <LangVersion>latest</LangVersion>
-	  <Version>0.0.0.8</Version>
+	  <Version>0.0.0.9</Version>
 	  <Nullable>annotations</Nullable>
     
     
@@ -37,6 +37,12 @@
 		</EmbeddedResource>
 	</ItemGroup>
 
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<!-- Add this line below to suppress the deps.json file -->
+		<GenerateDependencyFile>false</GenerateDependencyFile>
+	</PropertyGroup>
+	
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<Exec Command="xcopy &quot;$(TargetDir)$(TargetName).*&quot; &quot;$(APPDATA)\Emby-Server\programdata\plugins\&quot; /Y" />
 	</Target>

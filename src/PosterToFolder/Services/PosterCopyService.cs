@@ -7,6 +7,13 @@ using System.IO;
 
 namespace PosterToFolder.Services
 {
+    public enum EvaluationResult
+    {
+        Copied,
+        Skipped,
+        Errored
+    }
+
     /// <summary>
     /// Evaluates a single movie/show item and, if it has a primary ("poster") image
     /// but no folder image yet, copies the poster to folder.ext alongside it.
@@ -28,7 +35,8 @@ namespace PosterToFolder.Services
         /// <summary>Evaluates one item and copies its poster to folder.ext if applicable.</summary>
         /// <param name="item">The Movie or Series to evaluate.</param>
         /// <param name="typeLabel">Display label for logging, e.g. "Movie" or "Series".</param>
-        public void EvaluateAndCopy(BaseItem item, string typeLabel)
+        /// <returns>An EvaluationResult indicating if the item was copied, skipped, or threw an error.</returns>
+        public EvaluationResult EvaluateAndCopy(BaseItem item, string typeLabel)
         {
             var name = item.Name ?? item.Path ?? "(unknown)";
             var clientId = item.GetClientId();
@@ -122,7 +130,7 @@ namespace PosterToFolder.Services
             if (string.IsNullOrEmpty(folderPath))
             {
                 this.logger.Warn("{0} - {1} - [Id: {2}] Could not determine a containing folder path, skipping. See Debug line above for full detail.", typeLabel, name, clientId);
-                return;
+                return EvaluationResult.Skipped;
             }
 
             // Nothing to do if there's no poster to copy at all, or a folder image already exists.
@@ -130,7 +138,7 @@ namespace PosterToFolder.Services
             // folder.ext in the movie folder, wherever the source poster currently lives.
             if (!hasPrimaryImage || string.IsNullOrEmpty(sourcePath) || existingDestinationPath != null)
             {
-                return;
+                return EvaluationResult.Skipped;
             }
 
             if (!sourceExistsOnDisk)
@@ -142,7 +150,7 @@ namespace PosterToFolder.Services
                     clientId,
                     sourcePath,
                     sourceIsLocalFile);
-                return;
+                return EvaluationResult.Errored;
             }
 
             var extension = Path.GetExtension(sourcePath);
@@ -152,6 +160,7 @@ namespace PosterToFolder.Services
             {
                 this.fileSystem.CopyFile(sourcePath, destinationPath, false);
                 this.logger.Info("{0} - {1} - Copied {2}", typeLabel, name, Path.GetFileName(destinationPath));
+                return EvaluationResult.Copied;
             }
             catch (Exception ex)
             {
@@ -163,6 +172,7 @@ namespace PosterToFolder.Services
                     Path.GetFileName(sourcePath),
                     Path.GetFileName(destinationPath),
                     ex.Message);
+                return EvaluationResult.Errored;
             }
         }
 
