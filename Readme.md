@@ -10,12 +10,10 @@ If Emby primary image exists and destination folder.ext does not exist, copy pri
 
 ## 🛠️ Installation
 Copy dll to plugins folder.  
-Configure a scheduled task.
-
 
 ## 📖 Usage
 Test on one test path first.  
-Configure the scheduled task as desired.
+Configure a trigger for the scheduled task as desired.
 
 ## 🤝 Contributing
 For support and feature requests, visit the [Emby Community Forum Thread](https://emby.media/community/topic/148340-plugin-manage-coming-soon/).
