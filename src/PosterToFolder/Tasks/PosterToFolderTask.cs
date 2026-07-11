@@ -11,6 +11,7 @@ using PosterToFolder.Services;
 using PosterToFolder.UI.Config;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -65,17 +66,21 @@ namespace PosterToFolder.Tasks
                 return Task.CompletedTask;
             }
 
-            foreach (var path in enabledPaths)
+            foreach(var path in enabledPaths)
             {
                 this.logger.Info("Library/Paths Opted In: {0}", path);
             }
+
+            // Execute validation specifically using the scoped configuration path rules
+            var validationService = new LibraryValidationService(this.libraryManager, this.logger);
+            validationService.ValidateActiveConfiguredLibraries(enabledPaths);
 
             var query = new InternalItemsQuery
             {
                 IncludeItemTypes = new[] { typeof(Movie).Name, typeof(Series).Name },
                 Recursive = true,
                 DtoOptions = new DtoOptions(true),
-                IsVirtualItem = false, // exclude placeholders (e.g. "Coming Soon" items with no real file yet)
+                IsVirtualItem = false,
             };
 
             var items = this.libraryManager.GetItemList(query).ToList();
