@@ -5,7 +5,7 @@
     <AssemblyName>PosterToFolder</AssemblyName>
     <RootNamespace>PosterToFolder</RootNamespace>
     <LangVersion>latest</LangVersion>
-	  <Version>0.0.0.5</Version>
+	  <Version>0.0.0.6</Version>
 	  <Nullable>annotations</Nullable>
     
     
