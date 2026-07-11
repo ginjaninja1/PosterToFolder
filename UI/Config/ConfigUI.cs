@@ -67,5 +67,18 @@ namespace PosterToFolder.UI.Config
                 HyperLinkTargetExternal = true
             }
         };
+
+        public GenericItemList GithubLink { get; set; } = new GenericItemList
+        {
+            new GenericListItem
+            {
+                PrimaryText = "Github repository",
+                SecondaryText = "",
+                Icon = IconNames.link,
+                Status = ItemStatus.Succeeded,
+                HyperLink = "https://github.com/ginjaninja1/PosterToFolder",
+                HyperLinkTargetExternal = true
+            }
+        };
     }
 }

@@ -11,6 +11,6 @@ namespace PosterToFolder.UI.Config
         public string Path { get; set; }
 
         [DisplayName("Enabled")]
-        public bool Enabled { get; set; } = true;
+        public bool Enabled { get; set; } = false;
     }
 }
