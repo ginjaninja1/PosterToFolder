@@ -11,10 +11,10 @@ If Emby primary image exists and destination folder.ext does not exist, copy pri
 Copy dll to plugins folder.  
 
 ## 📖 Usage
-Test on one test path first.  
+Test on one test path first. Paths require "opt in".  
 Review info and debug logging.  
 Enable paths in the configuration.  
 Configure a trigger for the scheduled task once comfortable.
 
 ## 🤝 Contributing
-For support and feature requests, visit the [Emby Community Forum Thread](https://emby.media/community/topic/148340-plugin-manage-coming-soon/).
+For support and feature requests, visit the [Emby Community Forum Thread](https://emby.media/community/topic/148589-plugin-poster-to-folder/).

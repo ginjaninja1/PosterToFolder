@@ -63,7 +63,7 @@ namespace PosterToFolder.UI.Config
                 SecondaryText = "Issues, Suggestions and Updates",
                 Icon = IconNames.link,
                 Status = ItemStatus.Succeeded,
-                HyperLink = "https://emby.media/community/topic/148340-plugin-manage-coming-soon/",
+                HyperLink = "https://emby.media/community/topic/148589-plugin-poster-to-folder/",
                 HyperLinkTargetExternal = true
             }
         };
