@@ -21,21 +21,19 @@ namespace PosterToFolder.Tasks
 {
     /// <summary>
     /// Scheduled task that finds movies and TV shows which have a poster (primary) image
-    /// but no folder.ext yet, and copies the poster to folder.ext alongside it.
+    /// but no folder.ext yet, and copies/converts the poster to folder.jpg alongside it.
     /// </summary>
     public class PosterToFolderTask : IScheduledTask
     {
         private readonly ILibraryManager libraryManager;
         private readonly IFileSystem fileSystem;
-        private readonly IImageProcessor imageProcessor;
         private readonly ILogger logger;
 
-        // Add IImageProcessor to the constructor arguments; Emby will inject it automatically
-        public PosterToFolderTask(ILibraryManager libraryManager, IFileSystem fileSystem, IImageProcessor imageProcessor, ILogManager logManager)
+        // Constructor only uses standard, safely registered Emby IoC services
+        public PosterToFolderTask(ILibraryManager libraryManager, IFileSystem fileSystem, ILogManager logManager)
         {
             this.libraryManager = libraryManager;
             this.fileSystem = fileSystem;
-            this.imageProcessor = imageProcessor;
             this.logger = logManager.GetLogger("PosterToFolder");
         }
 
@@ -47,7 +45,6 @@ namespace PosterToFolder.Tasks
 
         public string Category => "GinjaNinja Tools";
 
-        // Changed from returning an un-awaited Task to a proper async Task method
         public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
             var options = Plugin.Instance.Configuration;
@@ -87,8 +84,8 @@ namespace PosterToFolder.Tasks
 
             var items = this.libraryManager.GetItemList(query).ToList();
 
-            // Pass the injected imageProcessor instance down into your copy service
-            var copyService = new PosterCopyService(this.logger, this.fileSystem, this.imageProcessor);
+            // Clean service instantiation matching the updated SkiaSharp service constructor
+            var copyService = new PosterCopyService(this.logger, this.fileSystem);
 
             var total = items.Count;
             var processed = 0;
@@ -103,9 +100,7 @@ namespace PosterToFolder.Tasks
 
                 var typeLabel = item is Series ? "Series" : "Movie";
 
-                // Properly await the asynchronous refactored evaluation function 
                 var result = await copyService.EvaluateAndCopyAsync(item, typeLabel, cancellationToken).ConfigureAwait(false);
-
                 switch (result)
                 {
                     case EvaluationResult.Copied:
