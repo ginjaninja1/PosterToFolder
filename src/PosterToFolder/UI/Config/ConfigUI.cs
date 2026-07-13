@@ -22,7 +22,7 @@ namespace PosterToFolder.UI.Config
         public bool EnablePlugin { get; set; } = true;
 
         public CaptionItem LibraryFilterHeading { get; set; } =
-            new CaptionItem("Library / Path Filters");
+            new CaptionItem("Library / Path Filter");
 
 
         /// <summary>

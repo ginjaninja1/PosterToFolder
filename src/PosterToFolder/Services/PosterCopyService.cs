@@ -1,9 +1,13 @@
-﻿using MediaBrowser.Controller.Entities;
+﻿using MediaBrowser.Controller.Drawing;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PosterToFolder.Services
 {
@@ -20,31 +24,35 @@ namespace PosterToFolder.Services
     /// </summary>
     public class PosterCopyService
     {
-        // Windows-supported image extensions we recognize as a possible existing folder image.
-        private static readonly string[] SupportedFolderImageExtensions = { ".jpg", ".png", ".gif" };
+        // Windows-supported image extensions recognized as a possible existing folder image.
+        private static readonly string[] SupportedFolderImageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
 
         private readonly ILogger logger;
         private readonly IFileSystem fileSystem;
+        private readonly IImageProcessor imageProcessor;
 
-        public PosterCopyService(ILogger logger, IFileSystem fileSystem)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PosterCopyService"/> class.
+        /// </summary>
+        public PosterCopyService(ILogger logger, IFileSystem fileSystem, IImageProcessor imageProcessor)
         {
             this.logger = logger;
             this.fileSystem = fileSystem;
+            this.imageProcessor = imageProcessor;
         }
 
-        /// <summary>Evaluates one item and copies its poster to folder.ext if applicable.</summary>
+        /// <summary>
+        /// Evaluates one item and copies/converts its poster to folder.jpg or folder.ext if applicable.
+        /// </summary>
         /// <param name="item">The Movie or Series to evaluate.</param>
         /// <param name="typeLabel">Display label for logging, e.g. "Movie" or "Series".</param>
+        /// <param name="cancellationToken">A cancellation token from the scheduled task environment.</param>
         /// <returns>An EvaluationResult indicating if the item was copied, skipped, or threw an error.</returns>
-        public EvaluationResult EvaluateAndCopy(BaseItem item, string typeLabel)
+        public async Task<EvaluationResult> EvaluateAndCopyAsync(BaseItem item, string typeLabel, CancellationToken cancellationToken)
         {
             var name = item.Name ?? item.Path ?? "(unknown)";
             var clientId = item.GetClientId();
 
-            // ContainingFolderPath returns the item's own folder if it is folder-based (e.g. Series,
-            // or a movie stored as "Movie Name/movie.mkv"), or the parent directory of the file
-            // for single-file movies not stored in their own folder. Kept separate from the
-            // resolved folderPath below so we can see in the log if/when the fallback kicks in.
             var containingFolderPathRaw = item.ContainingFolderPath;
             var folderPath = containingFolderPathRaw;
 
@@ -55,13 +63,6 @@ namespace PosterToFolder.Services
                     : Path.GetDirectoryName(item.Path);
             }
 
-            // Source image: covers BOTH cases -
-            //  (1) library saves artwork into the media folder -> ItemImageInfo.IsLocalFile = true,
-            //      Path sits next to the video file.
-            //  (2) library keeps only Emby's internal metadata cache -> IsLocalFile = false,
-            //      Path sits under GetInternalMetadataPath() instead.
-            // GetImagePath/GetImageInfo is meant to abstract over both, but we log everything
-            // involved rather than assume that holds.
             var hasPrimaryImage = item.HasImage(ImageType.Primary, 0);
             ItemImageInfo primaryImageInfo = null;
             if (hasPrimaryImage)
@@ -73,14 +74,6 @@ namespace PosterToFolder.Services
             var sourceIsLocalFile = primaryImageInfo?.IsLocalFile;
             var sourceExistsOnDisk = !string.IsNullOrEmpty(sourcePath) && this.fileSystem.FileExists(sourcePath);
 
-            // IsLocalFile only tells us the image was downloaded to a real file rather than being a
-            // remote URL reference - it's true whether that file lives next to the media or inside
-            // Emby's internal metadata cache. We still want to know which of the two it is - purely
-            // for visibility in the log - by comparing the image's directory to the item's own
-            // resolved folder, mirroring the same check BaseItem itself uses internally
-            // (FileSystem.ContainsSubPath(internalMetadataPath, itemImageInfo.Path)).
-            // This does NOT gate whether we copy: the goal is a folder.ext in the movie folder
-            // regardless of where the source poster currently lives.
             var sourceDirectory = string.IsNullOrEmpty(sourcePath) ? null : Path.GetDirectoryName(sourcePath);
             var sourceIsInItemFolder = !string.IsNullOrEmpty(sourceDirectory)
                 && !string.IsNullOrEmpty(folderPath)
@@ -133,9 +126,6 @@ namespace PosterToFolder.Services
                 return EvaluationResult.Skipped;
             }
 
-            // Nothing to do if there's no poster to copy at all, or a folder image already exists.
-            // We copy regardless of SourceLocation (MovieFolder or Metadata) - the goal is a
-            // folder.ext in the movie folder, wherever the source poster currently lives.
             if (!hasPrimaryImage || string.IsNullOrEmpty(sourcePath) || existingDestinationPath != null)
             {
                 return EvaluationResult.Skipped;
@@ -153,24 +143,57 @@ namespace PosterToFolder.Services
                 return EvaluationResult.Errored;
             }
 
-            var extension = Path.GetExtension(sourcePath);
-            var destinationPath = Path.Combine(folderPath, "folder" + extension);
+            var extension = Path.GetExtension(sourcePath) ?? string.Empty;
+
+            // Format-agnostic check: see if the file extension is already natively a JPEG variant
+            bool isAlreadyJpg = extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                                extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase);
+
+            // Enforce destination filename to folder.jpg if it needs conversion to ensure Windows compatibility
+            string destinationName = isAlreadyJpg ? "folder" + extension : "folder.jpg";
+            var destinationPath = Path.Combine(folderPath, destinationName);
 
             try
             {
-                this.fileSystem.CopyFile(sourcePath, destinationPath, false);
-                this.logger.Info("{0} - {1} - Copied {2}", typeLabel, name, Path.GetFileName(destinationPath));
+                if (!isAlreadyJpg)
+                {
+                    // 1. Configure options based on your ImageProcessingOptions properties
+                    var options = new ImageProcessingOptions
+                    {
+                        Item = item,
+                        Image = primaryImageInfo,
+                        SupportedOutputFormats = new[] { ImageFormat.Jpg }, // Fixes CS0117
+                        Quality = 90
+                    };
+
+                    // 2. Open a stream to the destination file
+                    using (var destinationStream = File.Create(destinationPath))
+                    {
+                        // 3. Call the 3-argument ProcessImage method (Fixes CS1501)
+                        // This instructs Emby to write the converted JPEG directly to folder.jpg
+                        await this.imageProcessor.ProcessImage(options, destinationStream, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    this.logger.Info("{0} - {1} - Converted format {2} to {3}", typeLabel, name, extension, destinationName);
+                }
+                else
+                {
+                    // High-speed block file copy if the file is already natively a JPEG variant
+                    this.fileSystem.CopyFile(sourcePath, destinationPath, false);
+                    this.logger.Info("{0} - {1} - Copied native {2}", typeLabel, name, destinationName);
+                }
+
                 return EvaluationResult.Copied;
             }
             catch (Exception ex)
             {
                 this.logger.Warn(
-                    "{0} - {1} - [Id: {2}] Failed to copy {3} to {4}: {5}",
+                    "{0} - {1} - [Id: {2}] Failed to write {3} from {4}: {5}",
                     typeLabel,
                     name,
                     clientId,
+                    destinationName,
                     Path.GetFileName(sourcePath),
-                    Path.GetFileName(destinationPath),
                     ex.Message);
                 return EvaluationResult.Errored;
             }

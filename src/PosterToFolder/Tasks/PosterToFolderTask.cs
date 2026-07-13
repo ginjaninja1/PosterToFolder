@@ -1,12 +1,13 @@
-﻿using MediaBrowser.Controller.Dto;
+﻿using MediaBrowser.Controller.Drawing;
+using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Tasks;
-using PosterToFolder.Configuration;
 using PosterToFolder.Services;
 using PosterToFolder.UI.Config;
 using System;
@@ -26,12 +27,15 @@ namespace PosterToFolder.Tasks
     {
         private readonly ILibraryManager libraryManager;
         private readonly IFileSystem fileSystem;
+        private readonly IImageProcessor imageProcessor;
         private readonly ILogger logger;
 
-        public PosterToFolderTask(ILibraryManager libraryManager, IFileSystem fileSystem, ILogManager logManager)
+        // Add IImageProcessor to the constructor arguments; Emby will inject it automatically
+        public PosterToFolderTask(ILibraryManager libraryManager, IFileSystem fileSystem, IImageProcessor imageProcessor, ILogManager logManager)
         {
             this.libraryManager = libraryManager;
             this.fileSystem = fileSystem;
+            this.imageProcessor = imageProcessor;
             this.logger = logManager.GetLogger("PosterToFolder");
         }
 
@@ -43,35 +47,33 @@ namespace PosterToFolder.Tasks
 
         public string Category => "GinjaNinja Tools";
 
-        public Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+        // Changed from returning an un-awaited Task to a proper async Task method
+        public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
             var options = Plugin.Instance.Configuration;
 
             if (!options.EnablePlugin)
             {
                 this.logger.Info("Poster To Folder is disabled in plugin settings. Exiting without processing.");
-                return Task.CompletedTask;
+                return;
             }
 
-            // Read directly from the Emby-managed configuration object using the correct type
             var filterRows = options.LibraryPaths ?? new List<LibraryPathFilterItem>();
 
             var enabledPaths = filterRows.Where(p => p.Enabled && !string.IsNullOrEmpty(p.Path)).Select(p => p.Path).ToList();
             var disabledPaths = filterRows.Where(p => !p.Enabled && !string.IsNullOrEmpty(p.Path)).Select(p => p.Path).ToList();
 
-            // Clear, explicit logging based on user configuration state
             if (enabledPaths.Count == 0)
             {
                 this.logger.Info("No Libraries/Paths opted in. Exiting without processing.");
-                return Task.CompletedTask;
+                return;
             }
 
-            foreach(var path in enabledPaths)
+            foreach (var path in enabledPaths)
             {
                 this.logger.Info("Library/Paths Opted In: {0}", path);
             }
 
-            // Execute validation specifically using the scoped configuration path rules
             var validationService = new LibraryValidationService(this.libraryManager, this.logger);
             validationService.ValidateActiveConfiguredLibraries(enabledPaths);
 
@@ -84,7 +86,9 @@ namespace PosterToFolder.Tasks
             };
 
             var items = this.libraryManager.GetItemList(query).ToList();
-            var copyService = new PosterCopyService(this.logger, this.fileSystem);
+
+            // Pass the injected imageProcessor instance down into your copy service
+            var copyService = new PosterCopyService(this.logger, this.fileSystem, this.imageProcessor);
 
             var total = items.Count;
             var processed = 0;
@@ -99,7 +103,9 @@ namespace PosterToFolder.Tasks
 
                 var typeLabel = item is Series ? "Series" : "Movie";
 
-                var result = copyService.EvaluateAndCopy(item, typeLabel);
+                // Properly await the asynchronous refactored evaluation function 
+                var result = await copyService.EvaluateAndCopyAsync(item, typeLabel, cancellationToken).ConfigureAwait(false);
+
                 switch (result)
                 {
                     case EvaluationResult.Copied:
@@ -117,16 +123,9 @@ namespace PosterToFolder.Tasks
                 progress.Report(total == 0 ? 100.0 : (processed / (double)total) * 100.0);
             }
 
-            // Consolidated summary metric output
             this.logger.Info("{0} Copied, {1} Skipped, {2} Errored", copiedCount, skippedCount, erroredCount);
-
-            return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Determines whether an item's folder falls under an enabled path.
-        /// Rules: disabled paths always exclude; the item must fall under an explicitly enabled path.
-        /// </summary>
         private bool IsInScope(BaseItem item, List<string> enabledPaths, List<string> disabledPaths)
         {
             var itemPath = item.ContainingFolderPath ?? item.Path;
@@ -155,20 +154,6 @@ namespace PosterToFolder.Tasks
             return itemPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
         }
 
-        /*
-        public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
-        {
-            return new[]
-            {
-                new TaskTriggerInfo
-                {
-                    Type = TaskTriggerInfo.TriggerWeekly,
-                    DayOfWeek = DayOfWeek.Sunday,
-                    TimeOfDayTicks = TimeSpan.FromHours(23).Ticks, // Sunday night
-                },
-            };
-        }
-        */
         public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
         {
             return Array.Empty<TaskTriggerInfo>();
