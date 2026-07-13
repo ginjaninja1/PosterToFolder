@@ -10,7 +10,7 @@ using PosterToFolder.Configuration;
 using PosterToFolder.UI;
 using System;
 using System.Collections.Generic;
-using System.IO; //
+using System.IO;
 
 namespace PosterToFolder
 {
