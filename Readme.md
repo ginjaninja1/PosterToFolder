@@ -1,7 +1,8 @@
 ## 🚀 Poster to Folder
-Copies Poster.ext to Folder.ext to beautify Windows.  
+Copies Poster.ext to Folder.jpg to beautify Windows.  
 To ensure Windows shows images for TV Shows and Movies folders.
 
+may only work on windows systems due to targetting net8.0 and Skia.
 
 ## ✨ Features
 For all Movies and Tv Shows in scope of library filter;  
